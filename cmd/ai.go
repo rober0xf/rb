@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"os"
+	appConfig "rb/config"
 
 	"github.com/spf13/cobra"
 	"google.golang.org/adk/v2/agent"
@@ -25,13 +26,13 @@ var aiCmd = &cobra.Command{
 	Short: "Interact with the model via CLI",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return callModel(cmd.Context(), args[0])
+		return callModel(cmd.Context(), cfg, args[0])
 	},
 }
 
-func callModel(ctx context.Context, prompt string) error {
+func callModel(ctx context.Context, cfg *appConfig.Config, prompt string) error {
 	model, err := gemini.NewModel(ctx, "gemini-3.1-flash-lite", &genai.ClientConfig{
-		APIKey: os.Getenv("API_KEY"),
+		APIKey: cfg.APIKey,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create model: %w", err)
@@ -81,6 +82,10 @@ func callModel(ctx context.Context, prompt string) error {
 
 	for ev, err := range events {
 		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+
 			return fmt.Errorf("error during run: %w", err)
 		}
 
