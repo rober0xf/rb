@@ -1,7 +1,8 @@
 package main
 
 import (
-	"log"
+	"fmt"
+	"os"
 	"rb/cmd"
 	"rb/config"
 )
@@ -9,10 +10,12 @@ import (
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("error loading .env file: %v", err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
 	if err := cmd.Execute(cfg); err != nil {
-		log.Fatalf("error running Execute: %v", err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 }

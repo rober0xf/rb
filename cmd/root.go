@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
+	"rb/cmd/password"
 	"rb/config"
 
 	"github.com/spf13/cobra"
@@ -12,22 +12,25 @@ import (
 
 var cfg *config.Config
 
+func init() {
+	rootCmd.AddCommand(
+		password.Command,
+		openCmd,
+		aiCmd,
+	)
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "rb",
 	Short: "Personal CLI assistant",
 }
 
 func Execute(c *config.Config) error {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer stop()
-
-	if err := rootCmd.ExecuteContext(ctx); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-
 	// save the config
 	cfg = c
 
-	return rootCmd.Execute()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	return rootCmd.ExecuteContext(ctx)
 }

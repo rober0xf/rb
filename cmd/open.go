@@ -6,10 +6,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	rootCmd.AddCommand(openCmd)
-}
-
 var openCmd = &cobra.Command{
 	Use:   "open [site]",
 	Short: "Open a site in the browser",

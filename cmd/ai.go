@@ -17,10 +17,6 @@ import (
 	"google.golang.org/genai"
 )
 
-func init() {
-	rootCmd.AddCommand(aiCmd)
-}
-
 var aiCmd = &cobra.Command{
 	Use:   "ai [input]",
 	Short: "Interact with the model via CLI",
