@@ -2,6 +2,7 @@ package password
 
 import (
 	"github.com/spf13/cobra"
+	"rb/internal/password"
 )
 
 var passwordShowCmd = &cobra.Command{
@@ -9,6 +10,6 @@ var passwordShowCmd = &cobra.Command{
 	Short: "Show the decrypted entry",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runPass("show", args[0])
+		return password.RunPass("show", args[0])
 	},
 }

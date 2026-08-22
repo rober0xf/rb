@@ -2,6 +2,7 @@ package password
 
 import (
 	"github.com/spf13/cobra"
+	"rb/internal/password"
 )
 
 var passwordListCmd = &cobra.Command{
@@ -9,6 +10,6 @@ var passwordListCmd = &cobra.Command{
 	Short: "List all your passwords in a tree format",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runPass("ls")
+		return password.RunPass("ls")
 	},
 }

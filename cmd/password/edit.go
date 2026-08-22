@@ -2,6 +2,7 @@ package password
 
 import (
 	"github.com/spf13/cobra"
+	"rb/internal/password"
 )
 
 var passwordEditCmd = &cobra.Command{
@@ -9,6 +10,6 @@ var passwordEditCmd = &cobra.Command{
 	Short: "Edit a specific entry",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runPass("edit", args[0])
+		return password.RunPass("edit", args[0])
 	},
 }

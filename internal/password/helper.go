@@ -5,7 +5,7 @@ import (
 	"os/exec"
 )
 
-func runPass(args ...string) error {
+func RunPass(args ...string) error {
 	cmd := exec.Command("pass", args...)
 
 	cmd.Stdout = os.Stdout

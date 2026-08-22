@@ -5,10 +5,19 @@ Personal CLI assistant built in Go using Cobra.
 It combines AI queries with developer tools, letting you interact with AI, open web targets, and trigger workflow automations from the shell.
 
 ### Commands
+
 ```bash
 rb ai "ask a question"
 rb open claude
+rb password
 ```
+
+### Requirements
+
+- Go 1.26.6
+- `pass` for password management
+
+### Install
 
 ### Install
 
