@@ -11,6 +11,8 @@ func init() {
 		passwordRemoveCmd,
 		passwordEditCmd,
 		passwordCreateCmd,
+		passwordInitCmd,
+		passwordCopyCmd,
 	)
 }
 

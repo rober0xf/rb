@@ -8,7 +8,7 @@ It combines AI queries with developer tools, letting you interact with AI, open 
 
 ```bash
 rb ai "ask a question"
-rb open claude
+rb open website
 rb password
 ```
 
@@ -16,8 +16,6 @@ rb password
 
 - Go 1.26.6
 - `pass` for password management
-
-### Install
 
 ### Install
 
