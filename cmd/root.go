@@ -14,7 +14,8 @@ var cfg *config.Config
 
 func init() {
 	rootCmd.AddCommand(
-		password.Command,
+		password.PasswordCommand,
+		password.TUICommand,
 		openCmd,
 		aiCmd,
 	)
