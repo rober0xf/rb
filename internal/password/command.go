@@ -1,6 +1,7 @@
 package password
 
 import (
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -94,8 +95,16 @@ func (p *PasswordManager) SavePassword(password Password) error {
 	}
 
 	cmd.Stdin = strings.NewReader(desc + "\n")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
+
+	return cmd.Run()
+}
+
+func (p *PasswordManager) DeletePassword(title string) error {
+	cmd := exec.Command("pass", "rm", title)
+	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
 
 	return cmd.Run()
 }

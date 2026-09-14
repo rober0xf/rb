@@ -14,6 +14,7 @@ const (
 	listView viewState = iota
 	TitleView
 	BodyView
+	confirmDeleteView
 )
 
 const (
@@ -31,6 +32,7 @@ type Model struct {
 	descriptionInput textinput.Model
 	passwordInput    textinput.Model
 	passwordsCommand *PasswordManager
+	confirmDelete    string
 }
 
 func NewModel(manager *PasswordManager) (Model, error) {
@@ -70,6 +72,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch m.state {
 		case listView:
 			switch key {
+			case "d":
+				m.confirmDelete = m.passwords[m.listIndex].Title
+				m.state = confirmDeleteView
+				return m, nil
+
 			case "q", "ctrl+c":
 				return m, tea.Quit
 
@@ -185,6 +192,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				return m, nil
 			}
+
+		case confirmDeleteView:
+			switch key {
+			case "y":
+				return m.DeletePassword(m.confirmDelete)
+
+			case "n", "esc":
+				m.confirmDelete = ""
+				m.state = listView
+				return m, nil
+
+			case "q", "ctrl+c":
+				return m, tea.Quit
+			}
 		}
 	}
 
@@ -201,4 +222,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, cmd
+}
+
+func (m Model) DeletePassword(title string) (tea.Model, tea.Cmd) {
+	if err := m.passwordsCommand.DeletePassword(title); err != nil {
+		return m, tea.Quit
+	}
+
+	passwords, err := m.passwordsCommand.ListPasswords()
+	if err != nil {
+		return m, tea.Quit
+	}
+
+	m.passwords = passwords
+	m.confirmDelete = ""
+	m.state = listView
+
+	if m.listIndex >= len(m.passwords) {
+		m.listIndex = max(0, len(m.passwords)-1)
+	}
+
+	return m, nil
 }
