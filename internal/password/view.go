@@ -1,9 +1,18 @@
 package password
 
 import (
-	"fmt"
 	"strings"
 )
+
+// show stacked
+func writeHints(b *strings.Builder, hints ...string) {
+	for i, h := range hints {
+		b.WriteString(indicatorStyle.Render(h))
+		if i < len(hints)-1 {
+			b.WriteString("\n")
+		}
+	}
+}
 
 func (m Model) View() string {
 	var b strings.Builder
@@ -19,7 +28,7 @@ func (m Model) View() string {
 		b.WriteString("\n")
 		b.WriteString(m.textinput.View())
 		b.WriteString("\n\n")
-		b.WriteString(indicatorStyle.Render("enter - save, esc - discard"))
+		writeHints(&b, "enter - save", "esc - discard")
 
 	case BodyView:
 		b.WriteString(labelStyle.Render("Description:"))
@@ -30,7 +39,7 @@ func (m Model) View() string {
 		b.WriteString("\n")
 		b.WriteString(m.passwordInput.View())
 		b.WriteString("\n\n")
-		b.WriteString(indicatorStyle.Render("ctrl+s - save, esc - discard, space - toggle reveal"))
+		writeHints(&b, "ctrl+s - save", "esc - discard", "space - toggle reveal")
 
 	case listView:
 		for i, password := range m.passwords {
@@ -44,11 +53,12 @@ func (m Model) View() string {
 		}
 
 		b.WriteString("\n\n")
-		b.WriteString(indicatorStyle.Render("n - new password, q - quit, d - delete"))
+		writeHints(&b, "n - new password", "q - quit", "d - delete", "c - copy to clipboard")
 
 	case confirmDeleteView:
-		fmt.Fprintf(&b, "Delete %q?\n\n", m.confirmDelete)
-		b.WriteString(indicatorStyle.Render("y - confirm, n - cancel, q - quit"))
+		b.WriteString(messageStyle.Render(m.confirmDelete))
+		b.WriteString("\n\n")
+		writeHints(&b, "y - confirm", "n - cancel", "q - quit")
 	}
 
 	return boxStyle.Render(b.String())

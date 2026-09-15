@@ -98,6 +98,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				return m, nil
 
+			case "c":
+				if len(m.passwords) == 0 {
+					break
+				}
+
+				title := m.passwords[m.listIndex].Title
+
+				return m, func() tea.Msg {
+					_ = m.passwordsCommand.CopyPassword(title)
+					return nil
+				}
+
 			case "enter":
 				if len(m.passwords) == 0 {
 					break
@@ -167,12 +179,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.current.Password = m.passwordInput.Value()
 
 				if err := m.passwordsCommand.SavePassword(m.current); err != nil {
-					return m, tea.Quit
+					return m, nil
 				}
 
 				passwords, err := m.passwordsCommand.ListPasswords()
 				if err != nil {
-					return m, tea.Quit
+					return m, nil
 				}
 
 				m.passwords = passwords

@@ -1,6 +1,8 @@
 package password
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -64,9 +66,9 @@ func (p *PasswordManager) ListPasswords() ([]Password, error) {
 }
 
 func (p *PasswordManager) ShowPassword(title string) (Password, error) {
-	output, err := exec.Command("pass", "show", title).Output()
+	output, err := exec.Command("pass", "show", title).CombinedOutput()
 	if err != nil {
-		return Password{}, err
+		return Password{}, fmt.Errorf("%w: %s", err, strings.TrimSpace(string(output)))
 	}
 
 	lines := strings.Split(strings.TrimSuffix(string(output), "\n"), "\n")
@@ -91,20 +93,41 @@ func (p *PasswordManager) SavePassword(password Password) error {
 
 	desc := password.Password
 	if password.Description != "" {
-		desc = "\n" + password.Description
+		desc = password.Password + "\n" + password.Description
 	}
 
 	cmd.Stdin = strings.NewReader(desc + "\n")
+
+	var stderr bytes.Buffer
+	cmd.Stdout = io.Discard
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("error saving password: %w: %s", err, stderr.String())
+	}
+
+	return nil
+}
+
+func (p *PasswordManager) DeletePassword(title string) error {
+	cmd := exec.Command("pass", "rm", title)
+
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 
 	return cmd.Run()
 }
 
-func (p *PasswordManager) DeletePassword(title string) error {
-	cmd := exec.Command("pass", "rm", title)
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
+func (p *PasswordManager) CopyPassword(title string) error {
+	cmd := exec.Command("pass", "-c", title)
 
-	return cmd.Run()
+	var stderr bytes.Buffer
+	cmd.Stdout = io.Discard
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("error copying password: %w: %s", err, stderr.String())
+	}
+
+	return nil
 }

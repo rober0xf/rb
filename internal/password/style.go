@@ -2,28 +2,28 @@ package password
 
 import "github.com/charmbracelet/lipgloss"
 
-var bocaBlue = lipgloss.Color("#0000cd")
-var bocaGold = lipgloss.Color("#fdff00")
+var blue = lipgloss.Color("#0000cd")
+var yellow = lipgloss.Color("#fdff00")
 
 var boxStyle = lipgloss.NewStyle().
 	Border(lipgloss.RoundedBorder()).
-	BorderForeground(bocaBlue).
+	BorderForeground(blue).
 	Padding(1, 2).
 	Width(50)
 
 var (
 	appNameStyle = lipgloss.NewStyle().
 			Bold(true).
-			Background(bocaBlue).
-			Foreground(bocaGold).
+			Background(blue).
+			Foreground(yellow).
 			Padding(0, 2).
 			Align(lipgloss.Center).
 			Width(46)
 
 	labelStyle = lipgloss.NewStyle().
 			Bold(true).
-			Background(bocaBlue).
-			Foreground(bocaGold).
+			Background(blue).
+			Foreground(yellow).
 			Padding(0, 1)
 
 	faintStyle = lipgloss.NewStyle().
@@ -36,14 +36,22 @@ var (
 
 	selectedItemStyle = lipgloss.NewStyle().
 				Bold(true).
-				Background(bocaBlue).
-				Foreground(bocaGold).
+				Background(blue).
+				Foreground(yellow).
 				Padding(0, 1)
 
 	indicatorStyle = lipgloss.NewStyle().
 			Bold(true).
-			Background(bocaBlue).
-			Foreground(bocaGold).
+			Background(blue).
+			Foreground(yellow).
 			Padding(0, 1).
 			MarginRight(1)
+
+	messageStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#ffef00")).
+			Background(lipgloss.Color("#0000cd")).
+			Bold(true).
+			Padding(0, 1).
+			Width(46).
+			Align(lipgloss.Center)
 )
