@@ -7,7 +7,8 @@ import (
 // show stacked
 func writeHints(b *strings.Builder, hints ...string) {
 	for i, h := range hints {
-		b.WriteString(indicatorStyle.Render(h))
+		b.WriteString(hintStyle.Render(h))
+
 		if i < len(hints)-1 {
 			b.WriteString("\n")
 		}
@@ -42,21 +43,36 @@ func (m Model) View() string {
 		writeHints(&b, "ctrl+s - save", "esc - discard", "space - toggle reveal")
 
 	case listView:
-		for i, password := range m.passwords {
-			b.WriteString("\n")
-
-			if i == m.listIndex {
-				b.WriteString(selectedItemStyle.Render("> " + password.Title))
-			} else {
-				b.WriteString(itemStyle.Render("  " + password.Title))
-			}
+		if dir := m.displayDir(); dir != "" {
+			b.WriteString(dirStyle.Render(dir))
+			b.WriteString("\n\n")
 		}
 
-		b.WriteString("\n\n")
+		for i, entry := range m.entries {
+			prefix := "  "
+
+			if i == m.cursor {
+				prefix = "> "
+				b.WriteString(tickStyle.Render(prefix))
+			}
+
+			name := entry.Name()
+			if entry.IsDir() {
+				name = dirStyle.Render(name + "/")
+			} else {
+				name = strings.TrimSuffix(name, ".gpg")
+				name = itemStyle.Render(name)
+			}
+
+			b.WriteString(name)
+			b.WriteString("\n")
+		}
+
+		b.WriteString("\n")
 		writeHints(&b, "n - new password", "q - quit", "d - delete", "c - copy to clipboard")
 
 	case confirmDeleteView:
-		b.WriteString(messageStyle.Render(m.confirmDelete))
+		b.WriteString(confirmDeleteStyle.Render(m.confirmDelete))
 		b.WriteString("\n\n")
 		writeHints(&b, "y - confirm", "n - cancel", "q - quit")
 	}

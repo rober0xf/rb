@@ -2,53 +2,44 @@ package password
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type viewState int
-type bodyField int
-
-const (
-	listView viewState = iota
-	TitleView
-	BodyView
-	confirmDeleteView
-)
-
-const (
-	descriptionField bodyField = iota
-	passwordField
-)
-
 type Model struct {
 	state            viewState
 	bodyField        bodyField
-	passwords        []Password
 	current          Password
-	listIndex        int
 	textinput        textinput.Model
 	descriptionInput textinput.Model
 	passwordInput    textinput.Model
 	passwordsCommand *PasswordManager
 	confirmDelete    string
+	currentDir       string
+	cursor           int
+	entries          []os.DirEntry
 }
 
 func NewModel(manager *PasswordManager) (Model, error) {
-	passwords, err := manager.ListPasswords()
-	if err != nil {
-		return Model{}, fmt.Errorf("failed to show passwords: %w", err)
-	}
-
-	return Model{
+	m := Model{
 		state:            listView,
-		passwords:        passwords,
+		currentDir:       manager.storeDir,
+		cursor:           0,
 		passwordsCommand: manager,
 		textinput:        textinput.New(),
 		descriptionInput: textinput.New(),
 		passwordInput:    textinput.New(),
-	}, nil
+	}
+
+	if err := m.loadDirectory(); err != nil {
+		return Model{}, fmt.Errorf("failed to load password store: %w", err)
+	}
+
+	return m, nil
 }
 
 func (m Model) Init() tea.Cmd {
@@ -72,22 +63,57 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch m.state {
 		case listView:
 			switch key {
+			case keyLeft:
+				if m.currentDir == "" || m.currentDir == m.passwordsCommand.storeDir {
+					return m, nil
+				}
+
+				m.currentDir = filepath.Dir(m.currentDir)
+				m.cursor = 0
+				_ = m.loadDirectory()
+				return m, nil
+
+			case keyRight:
+				if len(m.entries) == 0 {
+					return m, nil
+				}
+
+				entry := m.entries[m.cursor]
+				if entry.IsDir() {
+					m.currentDir = filepath.Join(m.currentDir, entry.Name())
+					m.cursor = 0
+
+					if err := m.loadDirectory(); err != nil {
+						return m, nil
+					}
+				}
+				return m, nil
+
 			case "d":
-				m.confirmDelete = m.passwords[m.listIndex].Title
+				if len(m.entries) == 0 {
+					break
+				}
+
+				entry := m.entries[m.cursor]
+				if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".gpg") {
+					break
+				}
+
+				m.confirmDelete = m.entryTitle(entry)
 				m.state = confirmDeleteView
 				return m, nil
 
 			case "q", "ctrl+c":
 				return m, tea.Quit
 
-			case "up", "k":
-				if m.listIndex > 0 {
-					m.listIndex--
+			case keyUp, "k":
+				if m.cursor > 0 {
+					m.cursor--
 				}
 
-			case "down", "j":
-				if m.listIndex < len(m.passwords)-1 {
-					m.listIndex++
+			case keyDown, "j":
+				if m.cursor < len(m.entries)-1 {
+					m.cursor++
 				}
 
 			case "n":
@@ -99,11 +125,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 
 			case "c":
-				if len(m.passwords) == 0 {
+				if len(m.entries) == 0 {
 					break
 				}
 
-				title := m.passwords[m.listIndex].Title
+				entry := m.entries[m.cursor]
+				if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".gpg") {
+					break
+				}
+
+				title := m.entryTitle(entry)
 
 				return m, func() tea.Msg {
 					_ = m.passwordsCommand.CopyPassword(title)
@@ -111,10 +142,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 			case "enter":
-				if len(m.passwords) == 0 {
+				if len(m.entries) == 0 {
 					break
 				}
-				m.current = m.passwords[m.listIndex]
+
+				entry := m.entries[m.cursor]
+				if entry.IsDir() {
+					m.currentDir = filepath.Join(m.currentDir, entry.Name())
+					m.cursor = 0
+
+					if err := m.loadDirectory(); err != nil {
+						return m, nil
+					}
+					return m, nil
+				}
+
+				if !strings.HasSuffix(entry.Name(), ".gpg") {
+					break
+				}
+
+				m.current.Title = m.entryTitle(entry)
 
 				password, err := m.passwordsCommand.ShowPassword(m.current.Title)
 				if err != nil {
@@ -125,6 +172,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.descriptionInput.SetValue(m.current.Description)
 				m.passwordInput.SetValue(m.current.Password)
 				m.passwordInput.EchoMode = textinput.EchoPassword
+				m.bodyField = descriptionField
 				m.descriptionInput.Focus()
 				m.state = BodyView
 			}
@@ -134,10 +182,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				title := m.textinput.Value()
 				if title != "" {
-					m.current.Title = title
+					m.current.Title = m.passTitle(title)
 					m.descriptionInput.SetValue("")
 					m.passwordInput.SetValue("")
 					m.passwordInput.EchoMode = textinput.EchoPassword
+					m.textinput.Blur()
+					m.bodyField = descriptionField
 					m.descriptionInput.Focus()
 					m.state = BodyView
 				}
@@ -182,16 +232,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 
-				passwords, err := m.passwordsCommand.ListPasswords()
-				if err != nil {
-					return m, nil
-				}
-
-				m.passwords = passwords
 				m.current = Password{}
 
 				m.descriptionInput.Blur()
 				m.passwordInput.Blur()
+
+				if err := m.loadDirectory(); err != nil {
+					return m, nil
+				}
+
+				if m.cursor >= len(m.entries) {
+					m.cursor = max(0, len(m.entries)-1)
+				}
 
 				m.state = listView
 
@@ -237,22 +289,41 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) DeletePassword(title string) (tea.Model, tea.Cmd) {
-	if err := m.passwordsCommand.DeletePassword(title); err != nil {
-		return m, tea.Quit
+	_ = m.passwordsCommand.DeletePassword(title)
+
+	if err := m.loadDirectory(); err != nil {
+		m.currentDir = m.passwordsCommand.storeDir
+		m.cursor = 0
+		if err := m.loadDirectory(); err != nil {
+			return m, tea.Quit
+		}
 	}
 
-	passwords, err := m.passwordsCommand.ListPasswords()
-	if err != nil {
-		return m, tea.Quit
-	}
-
-	m.passwords = passwords
 	m.confirmDelete = ""
 	m.state = listView
 
-	if m.listIndex >= len(m.passwords) {
-		m.listIndex = max(0, len(m.passwords)-1)
+	if m.cursor >= len(m.entries) {
+		m.cursor = max(0, len(m.entries)-1)
 	}
 
 	return m, nil
+}
+
+func (m *Model) loadDirectory() error {
+	entries, err := os.ReadDir(m.currentDir)
+	if err != nil {
+		return err
+	}
+
+	m.entries = entries[:0]
+
+	for _, entry := range entries {
+		if entry.Name() == ".gpg-id" {
+			continue
+		}
+
+		m.entries = append(m.entries, entry)
+	}
+
+	return nil
 }
