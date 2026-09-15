@@ -4,6 +4,7 @@ import "github.com/charmbracelet/lipgloss"
 
 var blue = lipgloss.Color("#0000cd")
 var yellow = lipgloss.Color("#fdff00")
+var lightblue = lipgloss.Color("#61afef")
 
 var boxStyle = lipgloss.NewStyle().
 	Border(lipgloss.RoundedBorder()).
@@ -47,11 +48,23 @@ var (
 			Padding(0, 1).
 			MarginRight(1)
 
-	messageStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#ffef00")).
-			Background(lipgloss.Color("#0000cd")).
+	confirmDeleteStyle = lipgloss.NewStyle().
+				Foreground(yellow).
+				Bold(true).
+				Padding(0, 1).
+				Width(46).
+				Align(lipgloss.Center)
+
+	dirStyle = lipgloss.NewStyle().
+			Foreground(lightblue)
+
+	tickStyle = lipgloss.NewStyle().
+			Foreground(yellow)
+
+	hintStyle = lipgloss.NewStyle().
 			Bold(true).
+			Background(blue).
+			Foreground(yellow).
 			Padding(0, 1).
-			Width(46).
-			Align(lipgloss.Center)
+			Width(46)
 )
