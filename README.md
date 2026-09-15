@@ -10,6 +10,7 @@ It combines AI queries with developer tools, letting you interact with AI, open 
 rb ai "ask a question"
 rb open website
 rb password
+rb ptui
 ```
 
 ### Requirements

@@ -13,14 +13,31 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type PasswordManager struct{}
+type PasswordManager struct {
+	storeDir string
+}
+
+func NewPasswordManager() (*PasswordManager, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+
+	return &PasswordManager{
+		storeDir: filepath.Join(home, ".password-store"),
+	}, nil
+}
 
 var initCmd = &cobra.Command{
 	Use:   "init [gpg-id]",
 	Short: "initialize the password store",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		manager := PasswordManager{}
+		manager, err := NewPasswordManager()
+		if err != nil {
+			return err
+		}
+
 		return manager.InitStore(args[0])
 	},
 }
@@ -30,15 +47,10 @@ func (p *PasswordManager) InitStore(gpgID string) error {
 }
 
 func (p *PasswordManager) ListPasswords() ([]Password, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
+	storePath := p.storeDir
 
-	storePath := filepath.Join(home, ".password-store")
 	var passwords []Password
-
-	err = filepath.WalkDir(storePath, func(path string, d fs.DirEntry, err error) error {
+	if err := filepath.WalkDir(storePath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -60,7 +72,9 @@ func (p *PasswordManager) ListPasswords() ([]Password, error) {
 		passwords = append(passwords, Password{Title: title})
 
 		return nil
-	})
+	}); err != nil {
+		return nil, err
+	}
 
 	return passwords, nil
 }
@@ -110,7 +124,7 @@ func (p *PasswordManager) SavePassword(password Password) error {
 }
 
 func (p *PasswordManager) DeletePassword(title string) error {
-	cmd := exec.Command("pass", "rm", title)
+	cmd := exec.Command("pass", "rm", "--force", title)
 
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard

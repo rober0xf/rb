@@ -28,9 +28,12 @@ var TUICommand = &cobra.Command{
 	Use:   "ptui",
 	Short: "Run the TUI interface",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		manager := ptui.PasswordManager{}
+		manager, err := ptui.NewPasswordManager()
+		if err != nil {
+			return err
+		}
 
-		model, err := ptui.NewModel(&manager)
+		model, err := ptui.NewModel(manager)
 		if err != nil {
 			return err
 		}
