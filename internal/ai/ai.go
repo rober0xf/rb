@@ -2,91 +2,71 @@ package ai
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	appConfig "rb/config"
 
-	"google.golang.org/adk/v2/agent"
-	"google.golang.org/adk/v2/agent/llmagent"
-	"google.golang.org/adk/v2/model/gemini"
-	"google.golang.org/adk/v2/runner"
-	"google.golang.org/adk/v2/session"
-	"google.golang.org/adk/v2/tool"
-	"google.golang.org/adk/v2/tool/geminitool"
-	"google.golang.org/genai"
+	openrouter "github.com/OpenRouterTeam/go-sdk"
+	"github.com/OpenRouterTeam/go-sdk/models/components"
 )
 
+const behavior = `
+You are rb, a personal AI assistant for the terminal.
+Be concise and practical. When helping with software engineering, debugging, logs, and code reviews.
+`
+
 func CallModel(ctx context.Context, cfg *appConfig.Config, prompt string) error {
-	model, err := gemini.NewModel(ctx, "gemini-3.1-flash-lite", &genai.ClientConfig{
-		APIKey: cfg.APIKey,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create model: %w", err)
-	}
+	done := make(chan struct{})
+	go spinner(done)
 
-	assistant, err := llmagent.New(llmagent.Config{
-		Name:        "rb",
-		Model:       model,
-		Description: "A personal AI assistant for the terminal",
-		Instruction: "You are a helpful technical assistant. Help with questions, debugging, logs, and code reviews.",
-		Tools: []tool.Tool{
-			geminitool.GoogleSearch{},
+	s := openrouter.New(
+		openrouter.WithSecurity(cfg.APIKey),
+	)
+
+	res, err := s.Chat.Send(ctx, components.ChatRequest{
+		Model: new("deepseek/deepseek-v4-flash-0731:free"),
+		Messages: []components.ChatMessages{
+			// behavior
+			components.CreateChatMessagesSystem(
+				components.ChatSystemMessage{
+					Content: components.CreateChatSystemMessageContentStr(behavior),
+					Role:    components.ChatSystemMessageRoleSystem,
+				},
+			),
+
+			// actual input
+			components.CreateChatMessagesUser(
+				components.ChatUserMessage{
+					Content: components.CreateChatUserMessageContentStr(prompt),
+					Role:    components.ChatUserMessageRoleUser,
+				},
+			),
 		},
-	})
+	}, nil)
+
+	close(done)
 	if err != nil {
-		return fmt.Errorf("failed to create agent: %w", err)
+		return fmt.Errorf("failed to send chat: %w", err)
+	}
+	fmt.Print("\r\033[K")
+
+	// no response
+	if res == nil || len(res.ChatResult.Choices) == 0 {
+		return nil
 	}
 
-	sessionSvc := session.InMemoryService()
-
-	_, err = sessionSvc.Create(ctx, &session.CreateRequest{
-		AppName:   "rb",
-		UserID:    "cli-user",
-		SessionID: "session-1",
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create session: %w", err)
-	}
-
-	r, err := runner.New(runner.Config{
-		AppName:        "rb",
-		Agent:          assistant,
-		SessionService: sessionSvc,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create runner: %w", err)
-	}
-
-	userContent := &genai.Content{
-		Role: "user",
-		Parts: []*genai.Part{
-			genai.NewPartFromText(prompt),
-		},
-	}
-
-	events := r.Run(ctx, "cli-user", "session-1", userContent, agent.RunConfig{})
-
-	for ev, err := range events {
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return nil
-			}
-
-			return fmt.Errorf("error during run: %w", err)
+	// we need to unwrap it bc its nullable
+	content := res.ChatResult.Choices[0].Message.Content
+	if content.IsSet() {
+		message, ok := content.Get()
+		if !ok {
+			return fmt.Errorf("failed to unwrap content")
 		}
 
-		if ev.Content == nil {
-			continue
-		}
-
-		for _, part := range ev.Content.Parts {
-			if part.Text != "" {
-				fmt.Print(part.Text)
-			}
+		if message.Str != nil {
+			fmt.Println(*message.Str)
 		}
 	}
-	fmt.Println()
 
 	return nil
 }
